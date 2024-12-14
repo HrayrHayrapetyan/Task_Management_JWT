@@ -2,7 +2,6 @@ import Routes from 'express'
 import dbConnect from '../config/db.js'
 import User from '../models/User.js'
 import Task from '../models/Task.js'
-import bcrypt from 'bcrypt'
 import path from 'path';
 
 const dirname = path.join(process.cwd(), '..', 'Client', 'Pages'); // Correctly resolve the path
@@ -13,10 +12,17 @@ routes.get("/", (req, res) => {
     res.sendFile(path.join(dirname,'login.html' ));
 })
 
+routes.get("/login",(req,res)=>{
+    res.sendFile(path.join(dirname,'login.html'))
+})
+
 routes.get("/register",(req,res) => {
     res.sendFile(path.join(dirname,'register.html' ));
 })
 
+routes.get('/dashboard',(req,res)=>{
+    res.sendFile(path.join(dirname,'dashboard.html'))
+})
 
 routes.post('/api/register', async (req,res)=>{
 
