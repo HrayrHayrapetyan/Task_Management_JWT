@@ -1,4 +1,23 @@
-import User from '../Server/models/User.js'
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    if (window.location.pathname=='/dashboard'){
+      console.log('inside if statement');
+          
+      const encodedUserData = document.cookie
+     .split('; ')
+     .find(row => row.startsWith('userData='))
+      ?.split('=')[1]; 
+      console.log(encodedUserData );
+
+    const userData = JSON.parse(decodeURIComponent(encodedUserData));
+    console.log(userData)
+
+    const userfield=document.getElementById('user')
+    userfield.textContent=userData.name
+    }
+});
+
 
 const registerForm = document.getElementById("registerForm");
 if (registerForm) {
@@ -44,8 +63,6 @@ if (loginForm) {
     const password = document.getElementById("password").value;
 
     const loginData = { email, password };
-    console.log(loginData);
-
     try {
       const response = await fetch("/api/login", {
         method: "POST",
@@ -54,11 +71,9 @@ if (loginForm) {
         },
         body: JSON.stringify(loginData),
       });
-
       if (response.ok) {
         console.log('login successfull');
-        document.getElementById('user').textContent=await User.findOne({email}).username
-        window.location.href='/dashboard'
+        window.location.href = response.url;
       } else {
         alert("Login failed. Please check your credentials");
       }
@@ -104,5 +119,5 @@ if (taskForm) {
 
 function logout() {
 
-    window.location.href='/login'
+    window.location.href='login.html'
 }
