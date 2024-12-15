@@ -3,73 +3,80 @@ import dbConnect from '../config/db.js'
 import User from '../models/User.js'
 import Task from '../models/Task.js'
 import path from 'path';
+import cookieParser from 'cookie-parser';
 
 const dirname = path.join(process.cwd(), '..', 'Client', 'Pages'); // Correctly resolve the path
 
 const routes = Routes()
 
 routes.get("/", (req, res) => {
-    res.sendFile(path.join(dirname,'login.html' ));
+    res.sendFile(path.join(dirname, 'login.html'));
 })
 
-routes.get("/login",(req,res)=>{
-    res.sendFile(path.join(dirname,'login.html'))
+routes.get("/login", (req, res) => {
+    res.sendFile(path.join(dirname, 'login.html'));
 })
 
-routes.get("/register",(req,res) => {
-    res.sendFile(path.join(dirname,'register.html' ));
+routes.get("/register", (req, res) => {
+    res.sendFile(path.join(dirname, 'register.html'));
 })
 
-routes.get('/dashboard',(req,res)=>{
+routes.get('/dashboard', (req, res) => {
+    
+    const userData = req.cookies['userData']
+
     res.sendFile(path.join(dirname,'dashboard.html'))
+    // res.sendFile(path.join(dirname, 'dashboard.html'))
 })
 
-routes.post('/api/register', async (req,res)=>{
+routes.post('/api/register', async (req, res) => {
 
     console.log('inside register back end');
 
-    const {username, email, password } = req.body;
-    
-    const duplicate = await User.findOne({username:username,email:email}).exec()
+    const { username, email, password } = req.body;
 
-    if (duplicate) return res.sendStatus(409).json({message:"User or email already exists"})
+    const duplicate = await User.findOne({ username: username, email: email }).exec()
 
-    try{
+    if (duplicate) return res.sendStatus(409).json({ message: "User or email already exists" })
 
-    //    const hashedPass=await  bcrypt.hash(password,10)
+    try {
 
-       const newUser=await  User.create({
-        "name": username,
-        "email": email,
-        "password": password,
-        "tasks": [],
-        "role": "User",
-        "createdAt": Date.now()
-       })
+        //    const hashedPass=await  bcrypt.hash(password,10)
 
-       console.log(newUser);
-       res.status(201).json({'success': `New user ${newUser} was created!`})
+        const newUser = await User.create({
+            "name": username,
+            "email": email,
+            "password": password,
+            "tasks": [],
+            "role": "User",
+            "createdAt": Date.now()
+        })
 
-    }catch(error){
-        res.status(500).json({'message': error.message})
+        console.log(newUser);
+        res.status(201).json({ 'success': `New user ${newUser} was created!` })
+
+    } catch (error) {
+        res.status(500).json({ 'message': error.message })
     }
-    
+
 })
 
-routes.post('/api/login',async (req,res)=>{
-    
+routes.post('/api/login', async (req, res) => {
+
     console.log('inside the login back endpoint');
 
-    const {email,password}=req.body
-    console.log(req.body);
-    
-    const user=await User.findOne({email: email,password: password})
+    const { email, password } = req.body
+    // console.log(req.body);
 
-    if (!user) return res.status(401).json({message:"Invalid username or password. Please try again."})
-    
-    res.status(200).json({message:"Login successfull"})
-  
+    const user = await User.findOne({ email: email, password: password })
+
+    if (!user) return res.status(401).json({ message: "Invalid username or password. Please try again." })
+    // console.log(user);
+
+    res.cookie('userData', JSON.stringify(user), { maxAge: 3600000, path: '/' }); // Store data in a cookie for 1 hour
+
+    res.redirect('/dashboard');
+
 })
-
 
 export default routes;
