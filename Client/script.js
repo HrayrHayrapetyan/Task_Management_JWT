@@ -1,22 +1,30 @@
 // const { getCookies } = require("undici-types");
 
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded",async () => {
 
     if (window.location.pathname=='/dashboard'){
       console.log('inside if statement');
-          
-      const encodedUserData = document.cookie
-     .split('; ')
-     .find(row => row.startsWith('userData='))
-      ?.split('=')[1]; 
-      console.log(encodedUserData );
 
-    const userData = JSON.parse(decodeURIComponent(encodedUserData));
-    console.log(userData)
+      const response=await fetch('/user/username',{
+        credentials: 'include'
+      })
 
-    const userfield=document.getElementById('user')
-    userfield.textContent=userData.name
+      if (response.ok){
+        const data=await response.json()
+        const username=data.username
+
+        const userField=document.getElementById('user')
+
+      if(userField){
+          userField.textContent=username
+        }
+        else{
+          console.warn('Failed to fetch username',response.statusText)
+        }
+      }
+      
+
     }
 });
 
@@ -75,7 +83,7 @@ if (loginForm) {
       });
       if (response.ok) {
         console.log('login successfull');
-        window.location.href='dashboard.html'
+        window.location.href='/dashboard'
       }
       else{
         console.error('Invalid credentials')
