@@ -4,7 +4,11 @@ import User from '../models/User.js'
 import Task from '../models/Task.js'
 import path from 'path';
 import cookieParser from 'cookie-parser';
+import jwt from 'jsonwebtoken'
+import dotenv from 'dotenv'
+import requireAuth from '../middleware/auth.js';
 
+dotenv.config();
 const dirname = path.join(process.cwd(), '..', 'Client', 'Pages'); // Correctly resolve the path
 
 const routes = Routes()
@@ -21,12 +25,11 @@ routes.get("/register", (req, res) => {
     res.sendFile(path.join(dirname, 'register.html'));
 })
 
-routes.get('/dashboard', (req, res) => {
+routes.get('/dashboard',requireAuth, (req, res) => {
+    console.log('inside dashboard');
     
-    const userData = req.cookies['userData']
+    res.sendFile(path.join(dirname,'dashboard.html')).json(req.user);
 
-    res.sendFile(path.join(dirname,'dashboard.html'))
-    // res.sendFile(path.join(dirname, 'dashboard.html'))
 })
 
 routes.post('/api/register', async (req, res) => {
@@ -73,9 +76,15 @@ routes.post('/api/login', async (req, res) => {
     if (!user) return res.status(401).json({ message: "Invalid username or password. Please try again." })
     // console.log(user);
 
-    res.cookie('userData', JSON.stringify(user), { maxAge: 3600000, path: '/' }); // Store data in a cookie for 1 hour
+    
+    const token=jwt.sign({user},process.env.JWT_SECRET,{expiresIn: '1h'})
 
-    res.redirect('/dashboard');
+    res.cookie('token',token,{
+        httpOnly: true,
+        maxAge:3600000,
+    })
+    res.redirect('/dashboard')
+
 
 })
 
