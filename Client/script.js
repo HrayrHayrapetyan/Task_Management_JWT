@@ -1,3 +1,5 @@
+// const { getCookies } = require("undici-types");
+
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -73,10 +75,12 @@ if (loginForm) {
       });
       if (response.ok) {
         console.log('login successfull');
-        window.location.href = response.url;
-      } else {
-        alert("Login failed. Please check your credentials");
+        window.location.href='dashboard.html'
       }
+      else{
+        console.error('Invalid credentials')
+      }
+      
     } catch (error) {
       console.error("Error during login:", error);
     }
