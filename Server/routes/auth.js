@@ -28,7 +28,34 @@ routes.get("/register", (req, res) => {
 routes.get('/dashboard',requireAuth, (req, res) => {
     console.log('inside dashboard');
     
-    res.sendFile(path.join(dirname,'dashboard.html')).json(req.user);
+    res.sendFile(path.join(dirname,'dashboard.html'));
+
+})
+
+routes.get('/user/username',async (req,res)=>{
+    console.log('inside the username endpoint');
+    
+    const token=req.cookies.token
+    console.log('getting the cookie');
+    
+    try{
+        const decoded=jwt.verify(token,process.env.JWT_SECRET)
+        const userId=decoded.id
+        console.log('token verified, user id : ',userId);
+        
+        const user=await User.findById(userId).select('name')
+        console.log('found the user');
+        console.log('username', user.name);
+        
+        if (!user){
+            res.status(404).json({message: 'Username not found'})
+        }
+
+        res.status(200).json({username: user.name})
+
+    }catch(err){
+        res.status(401).json({message:'invalid token'})
+    }
 
 })
 
@@ -76,16 +103,13 @@ routes.post('/api/login', async (req, res) => {
     if (!user) return res.status(401).json({ message: "Invalid username or password. Please try again." })
     // console.log(user);
 
-    
-    const token=jwt.sign({user},process.env.JWT_SECRET,{expiresIn: '1h'})
+    const token=jwt.sign({id:user._id},process.env.JWT_SECRET,{expiresIn: '1h'})
 
     res.cookie('token',token,{
         httpOnly: true,
         maxAge:3600000,
     })
     res.redirect('/dashboard')
-
-
 })
 
 export default routes;
