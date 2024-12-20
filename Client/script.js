@@ -13,18 +13,18 @@ document.addEventListener("DOMContentLoaded",async () => {
       if (response.ok){
         const data=await response.json()
         const username=data.username
-
+        console.log('tasks ',data.tasks);
         const userField=document.getElementById('user')
 
       if(userField){
-          userField.textContent=username
+        userField.textContent=username
+        const container=document.getElementById('tasks')
+          createTask(container, data.tasks[0])
         }
         else{
           console.warn('Failed to fetch username',response.statusText)
         }
       }
-      
-
     }
 });
 
@@ -130,6 +130,33 @@ if (taskForm) {
 }
 
 function logout() {
-
     window.location.href='login.html'
+}
+
+
+function createTask(container, task){
+  const div = document.createElement("div");
+  div.className = "grid grid-cols-1 md:grid-cols-3 gap-6 mt-6"
+
+  div.innerHTML = `
+    <div class="bg-white p-4 rounded-lg shadow-lg">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-semibold">${task.name}</h3>
+        <span class="text-sm text-gray-500">${task.dueDate}</span>
+      </div>
+    <p class="text-gray-700 mb-4">${task.description}</p>
+    <div class="flex items-center mb-4">
+        <span class="px-3 py-1 text-sm font-medium text-gray-800 bg-gray-100 rounded-full">
+            ${task.status}
+        </span>
+    </div>
+    <div class="flex space-x-3">
+        <button class="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-lg">Low</button>
+        <button class="px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-lg">Medium</button>
+        <button class="px-3 py-1 text-sm font-medium bg-red-100 text-red-800 rounded-lg">High</button>
+    </div>
+</div>
+  `
+  container.appendChild(div);
+
 }

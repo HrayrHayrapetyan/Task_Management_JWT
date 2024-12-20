@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
 import requireAuth from '../middleware/auth.js';
+import bcrypt from 'bcrypt'
 
 dotenv.config();
 const dirname = path.join(process.cwd(), '..', 'Client', 'Pages'); // Correctly resolve the path
@@ -43,15 +44,17 @@ routes.get('/user/username',async (req,res)=>{
         const userId=decoded.id
         console.log('token verified, user id : ',userId);
         
-        const user=await User.findById(userId).select('name')
+        const user=await User.findById(userId).select('name').populate('tasks').exec()
         console.log('found the user');
         console.log('username', user.name);
+        console.log('tasks ',user.tasks);
         
         if (!user){
             res.status(404).json({message: 'Username not found'})
         }
 
-        res.status(200).json({username: user.name})
+        res.status(200).json({username: user.name,
+                                tasks: user.tasks})
 
     }catch(err){
         res.status(401).json({message:'invalid token'})
@@ -71,13 +74,21 @@ routes.post('/api/register', async (req, res) => {
 
     try {
 
-        //    const hashedPass=await  bcrypt.hash(password,10)
+        const hashedPass=await  bcrypt.hash(password,10)
+
+        const task=await Task.create({
+            "name": "user's task",
+            "description": "easiest task ever",
+            "dueDate": '01.05.2025',
+            "createdAt": Date.now(),
+            "priority": 'High'
+        }) 
 
         const newUser = await User.create({
             "name": username,
             "email": email,
-            "password": password,
-            "tasks": [],
+            "password": hashedPass,
+            "tasks": [task],
             "role": "User",
             "createdAt": Date.now()
         })
@@ -98,7 +109,13 @@ routes.post('/api/login', async (req, res) => {
     const { email, password } = req.body
     // console.log(req.body);
 
-    const user = await User.findOne({ email: email, password: password })
+    const user = await User.findOne({ email: email }).exec()
+    console.log(user);  
+    const isMatch=await bcrypt.compare(password,user.password)
+
+    if (!isMatch){
+        res.status(401).json({message: 'Check your email or password'})
+    }
 
     if (!user) return res.status(401).json({ message: "Invalid username or password. Please try again." })
     // console.log(user);

@@ -12,22 +12,19 @@ const taskSchema=new Schema({
         type: String,
         required: true
     },
-    isCompleted:{
-        type: Boolean,
-        default: false
+    status:{
+        type: String,
+        default: 'To Do'
     },
     dueDate: {
         type: Date
     },
-
-    user: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
     createdAt:{
         type: Date,
         default: Date.now
+    },
+    priority: {
+        type: String
     }
 })
 
