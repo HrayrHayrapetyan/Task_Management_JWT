@@ -2,40 +2,61 @@
 
 document.addEventListener("DOMContentLoaded", async () => {
   if (window.location.pathname == "/dashboard") {
-    const response = await fetch("/user/username", {
-      credentials: "include",
+
+    try{
+    const response = await fetch("/user/my-tasks", {
+      credentials: "include"
     });
 
-    if (response.ok) {
+    if (!response.ok) throw new Error("Failed to fetch user's role")
       const user = await response.json();
       const username = user.username;
       const userField = document.getElementById("user");
 
-      if (userField) {
-        userField.textContent = username;
-        const container = document.getElementById("tasks");
-        const createTask = document.getElementById("createTask");
-        const role=document.getElementById('role')
-        switch (user.role) {
-          case 1:
+      userField.textContent = username;
+      const container = document.getElementById("tasks");
+      const createTask = document.getElementById("createTask");
+      const role=document.getElementById('role')
+      
+      if (user.role===1){
             createTask.style.display = "none";
             role.textContent='user'
-            break;
-          case 2:
+            for (let task of user.tasks) {
+              renderTask(container, task);
+            }
+       }else if (user.role===2){
             createTask.style.display = "block";
             role.textContent='admin'
-            break;
-          default:
-            createTask.style.display = "none"; // Default: Hide
-            break;
-        }
-        for (let task of user.tasks) {
-          renderTask(container, task);
-        }
-      } else {
-        console.warn("Failed to fetch username", response.statusText);
-      }
+       
+                const res=await fetch('/admin/users-with-tasks')
+                if(!res.ok)throw new Error('Failed to fetch users with tasks')
+                const users=await res.json()
+
+                users.forEach(user => {
+
+                  const userDiv=document.createElement('div')
+                  userDiv.classList.add('bg-white', 'p-4', 'rounded-lg', 'shadow-lg', 'mb-4');
+                  
+                  const userName=document.createElement('h3')
+                  userName.classList.add('text-xl','font-semibold','text-blue-800')
+                  userName.textContent=`${user.name} (Role: ${user.role===2? 'Admin' : 'User'})`
+
+                  userDiv.appendChild(userName)
+
+                  user.tasks.forEach(task=>{
+                    renderTask(userDiv,task)
+                  })
+
+                  container.appendChild(userDiv)
+                });
+                
+          }
+
+    }catch(error){
+      console.error("Error when getting the user's role",error)
     }
+
+    
   }
 });
 
@@ -217,7 +238,7 @@ if (taskButton) {
               assignedUser,
             };
 
-            const assignResponse = await fetch("/user/assignTask", {
+            const assignResponse = await fetch("/user/assign-task", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",

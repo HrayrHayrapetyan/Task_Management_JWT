@@ -32,35 +32,8 @@ routes.get('/dashboard',requireAuth, (req, res) => {
 
 })
 
-routes.get('/user/username',async (req,res)=>{
-    
-    const token=req.cookies.token
-    
-    try{
-        const decoded=jwt.verify(token,process.env.JWT_SECRET)
-        const userId=decoded.id
-        
-        
-        const user=await User.findById(userId).select('name').select('role').populate('tasks').exec()
-      
-        
-        if (!user){
-            res.status(404).json({message: 'Username not found'})
-        }
-
-        res.status(200).json({username: user.name,
-                                tasks: user.tasks,
-                                role: user.role})
-
-    }catch(err){
-        res.status(401).json({message:'invalid token'})
-    }
-
-})
 
 routes.post('/api/register', async (req, res) => {
-
-    
 
     const { username, email, password } = req.body;
 
@@ -72,27 +45,11 @@ routes.post('/api/register', async (req, res) => {
 
         const hashedPass=await  bcrypt.hash(password,10)
 
-        const task=await Task.create({
-            "name": "user's task",
-            "description": "easiest task ever",
-            "dueDate": '01.05.2025',
-            "createdAt": Date.now(),
-            "priority": 'High'
-        }) 
-        const task2=await Task.create({
-            "name": "another one",
-            "description": "another taskanother taskanother taskanother taskanother taskanother taskanother taskanother taskanother taskanother taskanother taskanother task",
-            "dueDate": '01.06.2025',
-            "createdAt": Date.now(),
-            "priority": 'Low'
-        })
-        
-
         const newUser = await User.create({
             "name": username,
             "email": email,
             "password": hashedPass,
-            "tasks": [task,task2],
+            "tasks": [],
             "role": 1,
             "createdAt": Date.now()
         })
@@ -133,7 +90,7 @@ routes.post('/api/login', async (req, res) => {
     res.redirect('/dashboard')
 })
 
-routes.post('/user/assignTask',async (req,res)=>{
+routes.post('/user/assign-task',async (req,res)=>{
     console.log('inside assign task');
     
 
@@ -146,7 +103,6 @@ routes.post('/user/assignTask',async (req,res)=>{
 
     const formattedDate = new Date(dueDate).toISOString().slice(0, 10);
 
-
     const assignedTask=await Task.create({
         name: taskName,
         description: description,
@@ -158,6 +114,9 @@ routes.post('/user/assignTask',async (req,res)=>{
 
     try{
     const user=await User.findOneAndUpdate({name: assignedUser},{$push: {tasks: assignedTask}},{new: true})
+    if (user.role==2){
+        res.status(400).json({message: 'Cannot assign to an admin '})
+    }
     console.log('our user ',user);
     
     console.log('user found and task updated');
@@ -179,5 +138,44 @@ routes.post('/logout',(req,res)=>{
 
     res.status(200).send('token cleared')
 })
+
+routes.get('/admin/users-with-tasks',async (req,res)=>{
+
+    try{
+        const users=await User.find().populate('tasks')
+        return res.json(users)
+    }catch{err}{
+        return res.status(500).json({ message : 'Server Error'})
+    }
+})
+
+
+
+routes.get('/user/my-tasks',async (req,res)=>{
+    
+    const token=req.cookies.token
+    
+    try{
+        const decoded=jwt.verify(token,process.env.JWT_SECRET)
+        const userId=decoded.id
+        
+        
+        const user=await User.findById(userId).select('name').select('role').populate('tasks').exec()
+      
+        
+        if (!user){
+            res.status(404).json({message: 'Username not found'})
+        }
+
+        return res.status(200).json({username: user.name,
+                                tasks: user.tasks,
+                                role: user.role})
+
+    }catch(err){
+        res.status(401).json({message:'invalid token'})
+    }
+
+})
+
 
 export default routes;
