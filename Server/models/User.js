@@ -24,12 +24,12 @@ const userSchema= new Schema({
         ref: 'Task'
     }],
     role:{
-        type: String,
+        type: Number,
         required: true
     },
     createdAt: {
         type: Date,
-        default: Date.now
+        default: new Intl.DateTimeFormat('en-GB').format(new Date(Date.now()))
     }
 })
 

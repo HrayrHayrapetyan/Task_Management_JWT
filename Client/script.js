@@ -1,33 +1,43 @@
 // const { getCookies } = require("undici-types");
 
+document.addEventListener("DOMContentLoaded", async () => {
+  if (window.location.pathname == "/dashboard") {
+    const response = await fetch("/user/username", {
+      credentials: "include",
+    });
 
-document.addEventListener("DOMContentLoaded",async () => {
+    if (response.ok) {
+      const user = await response.json();
+      const username = user.username;
+      const userField = document.getElementById("user");
 
-    if (window.location.pathname=='/dashboard'){
-      console.log('inside if statement');
-
-      const response=await fetch('/user/username',{
-        credentials: 'include'
-      })
-
-      if (response.ok){
-        const data=await response.json()
-        const username=data.username
-        console.log('tasks ',data.tasks);
-        const userField=document.getElementById('user')
-
-      if(userField){
-        userField.textContent=username
-        const container=document.getElementById('tasks')
-          createTask(container, data.tasks[0])
+      if (userField) {
+        userField.textContent = username;
+        const container = document.getElementById("tasks");
+        const createTask = document.getElementById("createTask");
+        const role=document.getElementById('role')
+        switch (user.role) {
+          case 1:
+            createTask.style.display = "none";
+            role.textContent='user'
+            break;
+          case 2:
+            createTask.style.display = "block";
+            role.textContent='admin'
+            break;
+          default:
+            createTask.style.display = "none"; // Default: Hide
+            break;
         }
-        else{
-          console.warn('Failed to fetch username',response.statusText)
+        for (let task of user.tasks) {
+          renderTask(container, task);
         }
+      } else {
+        console.warn("Failed to fetch username", response.statusText);
       }
     }
+  }
 });
-
 
 const registerForm = document.getElementById("registerForm");
 if (registerForm) {
@@ -39,20 +49,18 @@ if (registerForm) {
     const password = document.getElementById("password").value;
 
     const newUser = { username, email, password };
-    console.log("our user", newUser);
 
     try {
       const response = await fetch("/api/register", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",   
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(newUser),
       });
-      console.log("after getting the response");
 
       if (response.ok) {
-        alert('Registration successfull')
+        alert("Registration successfull");
         window.location.href = "/";
       } else {
         alert("Registration failed. Please try again.");
@@ -82,67 +90,55 @@ if (loginForm) {
         body: JSON.stringify(loginData),
       });
       if (response.ok) {
-        console.log('login successfull');
-        window.location.href='/dashboard'
+        console.log("login successfull");
+        window.location.href = "/dashboard";
+      } else {
+        console.error("Invalid credentials");
       }
-      else{
-        console.error('Invalid credentials')
-      }
-      
     } catch (error) {
       console.error("Error during login:", error);
     }
   });
 }
 
-const taskForm = document.getElementById("taskForm");
+const logout=document.getElementById('logout')
+if (logout){
+  logout.addEventListener('click',async ()=>{
 
-if (taskForm) {
-  addEventListener("submit", function (e) {
-    e.preventDefault();
+    try{
+    const clearResponse=await fetch('/logout',{
+      method: 'POST',
+      credentials: 'same-origin'
+    })
 
-    const taskName = document.getElementById("task-name").value;
-    const dueDate = document.getElementById("due-date").value;
-    const status = document.getElementById("status").value;
+    if (clearResponse.ok){
+    window.location.href = "/login";
+    }
+    else{
+      console.error('Failed to log out')
+    }
+  }
+  catch(error){
+    console.error('Error during logout ',error)
+  }
+    
+  })
 
-    const taskItem = document.createElement("div");
-    taskItem.classList.add(
-      "task-item",
-      "bg-white",
-      "p-4",
-      "rounded-lg",
-      "shadow",
-      "hover:shadow-lg"
-    );
-
-    taskItem.innerHTML = `
-        <h3 class="text-lg font-bold text-gray-800">${taskName}</h3>
-        <p class="text-sm text-gray-500">Due date: ${dueDate}</p>
-        <p class="text-sm text-gray-500">Status: ${status}</p>
-    `;
-
-    document.getElementById("taskList").appendChild(taskItem);
-
-    document.getElementById("task-name").value = "";
-    document.getElementById("due-date").value = "";
-    document.getElementById("status").value = "not-started";
-  });
-}
-
-function logout() {
-    window.location.href='login.html'
 }
 
 
-function createTask(container, task){
+
+
+function renderTask(container, task) {
   const div = document.createElement("div");
-  div.className = "grid grid-cols-1 md:grid-cols-3 gap-6 mt-6"
+  div.className = "grid grid-cols-1 md:grid-cols-3 gap-6 mt-6";
+  
 
   div.innerHTML = `
-    <div class="bg-white p-4 rounded-lg shadow-lg">
-      <div class="flex justify-between items-center mb-4">
+    <div class="bg-white p-4 rounded-lg shadow-lg col-span-1 md:col-span-3">
+      <div class="flex justify-between items-center mb-4 ">
         <h3 class="text-xl font-semibold">${task.name}</h3>
-        <span class="text-sm text-gray-500">${task.dueDate}</span>
+        <span class="text-sm text-gray-500 ml-4">${task.dueDate}</span>
       </div>
     <p class="text-gray-700 mb-4">${task.description}</p>
     <div class="flex items-center mb-4">
@@ -151,12 +147,111 @@ function createTask(container, task){
         </span>
     </div>
     <div class="flex space-x-3">
-        <button class="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-lg">Low</button>
-        <button class="px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-lg">Medium</button>
-        <button class="px-3 py-1 text-sm font-medium bg-red-100 text-red-800 rounded-lg">High</button>
+        ${
+          task.priority === "Low"
+            ? '<button class="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-lg">Low</button>'
+            : ""
+        }
+        ${
+          task.priority === "Medium"
+            ? '<button class="px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-lg">Medium</button>'
+            : ""
+        }
+        ${
+          task.priority === "High"
+            ? '<button class="px-3 py-1 text-sm font-medium bg-red-100 text-red-800 rounded-lg">High</button>'
+            : ""
+        }
     </div>
 </div>
-  `
+  `;
   container.appendChild(div);
-
 }
+
+const taskButton = document.getElementById("createTask");
+
+if (taskButton) {
+  taskButton.addEventListener("click", () => {
+    const popupContainer = document.createElement("div");
+    popupContainer.id = "popupContainer";
+    popupContainer.classList.add(
+      "fixed",
+      "top-0",
+      "left-0",
+      "w-full",
+      "h-full",
+      "flex",
+      "items-center",
+      "justify-center",
+      "bg-gray-900",
+      "bg-opacity-50",
+      "z-50"
+    );
+    document.body.appendChild(popupContainer);
+
+    fetch("./Pages/createTask.html")
+      .then((response) => response.text())
+      .then((data) => {
+        popupContainer.innerHTML = data;
+        popupContainer.classList.remove("hidden");
+
+        const taskForm = document.getElementById("taskForm");
+
+        if (taskForm) {
+          taskForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            console.log("inside task form");
+
+            const taskName = document.getElementById("task-name").value;
+            const description = document.getElementById("description").value;
+            const dueDate = document.getElementById("due-date").value;
+            const priority = document.getElementById("priority").value;
+            const assignedUser = document.getElementById("assigned-user").value;
+            console.log(dueDate);
+
+            const taskData = {
+              taskName,
+              description,
+              dueDate,
+              priority,
+              assignedUser,
+            };
+
+            const assignResponse = await fetch("/user/assignTask", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(taskData),
+            });
+
+            if (assignResponse.ok) {
+              const container = document.getElementById("popupContainer");
+              container.remove();
+            } else {
+              console.error("Something went wrong when assigning the task");
+            }
+          });
+        }
+
+        const closeButton = document.getElementById("closeForm");
+
+        if (closeButton) {
+          closeButton.addEventListener("click", () => {
+            console.log("Clicked close task button");
+
+            const container = document.getElementById("popupContainer");
+            container.remove();
+          });
+        }
+      })
+      .catch((error) => console.error("Error loading popup:", error));
+  });
+}
+
+window.addEventListener("click", (event) => {
+  const container = document.getElementById("popupContainer");
+  if (event.target === container) {
+    container.remove();
+  }
+});

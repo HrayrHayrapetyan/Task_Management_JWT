@@ -27,34 +27,30 @@ routes.get("/register", (req, res) => {
 })
 
 routes.get('/dashboard',requireAuth, (req, res) => {
-    console.log('inside dashboard');
     
     res.sendFile(path.join(dirname,'dashboard.html'));
 
 })
 
 routes.get('/user/username',async (req,res)=>{
-    console.log('inside the username endpoint');
     
     const token=req.cookies.token
-    console.log('getting the cookie');
     
     try{
         const decoded=jwt.verify(token,process.env.JWT_SECRET)
         const userId=decoded.id
-        console.log('token verified, user id : ',userId);
         
-        const user=await User.findById(userId).select('name').populate('tasks').exec()
-        console.log('found the user');
-        console.log('username', user.name);
-        console.log('tasks ',user.tasks);
+        
+        const user=await User.findById(userId).select('name').select('role').populate('tasks').exec()
+      
         
         if (!user){
             res.status(404).json({message: 'Username not found'})
         }
 
         res.status(200).json({username: user.name,
-                                tasks: user.tasks})
+                                tasks: user.tasks,
+                                role: user.role})
 
     }catch(err){
         res.status(401).json({message:'invalid token'})
@@ -64,7 +60,7 @@ routes.get('/user/username',async (req,res)=>{
 
 routes.post('/api/register', async (req, res) => {
 
-    console.log('inside register back end');
+    
 
     const { username, email, password } = req.body;
 
@@ -83,17 +79,25 @@ routes.post('/api/register', async (req, res) => {
             "createdAt": Date.now(),
             "priority": 'High'
         }) 
+        const task2=await Task.create({
+            "name": "another one",
+            "description": "another taskanother taskanother taskanother taskanother taskanother taskanother taskanother taskanother taskanother taskanother taskanother task",
+            "dueDate": '01.06.2025',
+            "createdAt": Date.now(),
+            "priority": 'Low'
+        })
+        
 
         const newUser = await User.create({
             "name": username,
             "email": email,
             "password": hashedPass,
-            "tasks": [task],
-            "role": "User",
+            "tasks": [task,task2],
+            "role": 1,
             "createdAt": Date.now()
         })
 
-        console.log(newUser);
+
         res.status(201).json({ 'success': `New user ${newUser} was created!` })
 
     } catch (error) {
@@ -104,13 +108,13 @@ routes.post('/api/register', async (req, res) => {
 
 routes.post('/api/login', async (req, res) => {
 
-    console.log('inside the login back endpoint');
+    
 
     const { email, password } = req.body
     // console.log(req.body);
 
     const user = await User.findOne({ email: email }).exec()
-    console.log(user);  
+    
     const isMatch=await bcrypt.compare(password,user.password)
 
     if (!isMatch){
@@ -127,6 +131,53 @@ routes.post('/api/login', async (req, res) => {
         maxAge:3600000,
     })
     res.redirect('/dashboard')
+})
+
+routes.post('/user/assignTask',async (req,res)=>{
+    console.log('inside assign task');
+    
+
+   const {taskName,description,dueDate,priority,assignedUser}=req.body
+    console.log(taskName);
+    console.log(description);
+    console.log(dueDate);
+    console.log(priority);
+    console.log(assignedUser)
+
+    const formattedDate = new Date(dueDate).toISOString().slice(0, 10);
+
+
+    const assignedTask=await Task.create({
+        name: taskName,
+        description: description,
+        dueDate: formattedDate,
+        priority: priority
+    })
+
+    console.log('After adding to db ', assignedTask);
+
+    try{
+    const user=await User.findOneAndUpdate({name: assignedUser},{$push: {tasks: assignedTask}},{new: true})
+    console.log('our user ',user);
+    
+    console.log('user found and task updated');
+    
+    if (!user) res.status(401).json({message: 'Username not found'})
+
+    res.status(200).json({message: 'task assigned successfully'})
+    }
+    catch(error){
+        console.error('Error updating user by username:',error)
+    }
+   
+})
+
+
+routes.post('/logout',(req,res)=>{
+
+    res.clearCookie('token',{ httpOnly: true, secure: true, sameSite: 'Strict'})
+
+    res.status(200).send('token cleared')
 })
 
 export default routes;

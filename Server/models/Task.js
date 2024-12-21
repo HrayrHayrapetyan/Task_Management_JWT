@@ -17,7 +17,7 @@ const taskSchema=new Schema({
         default: 'To Do'
     },
     dueDate: {
-        type: Date
+        type: String
     },
     createdAt:{
         type: Date,
