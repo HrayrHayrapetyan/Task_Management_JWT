@@ -35,6 +35,7 @@ Requirements:
 Installation Steps:
 
  1.Open the terminal
+ 
  2.Clone this project to your local machine
 
  ```git clone <repository-url>```
