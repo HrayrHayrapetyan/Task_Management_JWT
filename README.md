@@ -1,4 +1,4 @@
-# Task_Management_JWT
+# Task Management with JWT Authentication
 
 ## Manage your tasks effortlessly
 
