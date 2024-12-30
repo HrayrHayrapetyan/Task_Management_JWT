@@ -1,278 +1,198 @@
-// const { getCookies } = require("undici-types");
+import { handleEditTask, renderTask } from "./dashboard.js";
+import openTaskPopup from "./taskPopup.js";
+import { handleLogIn, handleLogOut } from "./loginForm.js";
+import handleRegisterForm from "./registerForm.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   if (window.location.pathname == "/dashboard") {
+    try {
+      const response = await fetch("/user/my-tasks", {//get the role of the user logged in
+        credentials: "include",
+      });
 
-    try{
-    const response = await fetch("/user/my-tasks", {
-      credentials: "include"
-    });
-
-    if (!response.ok) throw new Error("Failed to fetch user's role")
-      const user = await response.json();
-      const username = user.username;
+      if (!response.ok) throw new Error("Failed to fetch user");
+      const loggedUser = await response.json();
+      const username = loggedUser.username;
       const userField = document.getElementById("user");
 
       userField.textContent = username;
       const container = document.getElementById("tasks");
+
       const createTask = document.getElementById("createTask");
-      const role=document.getElementById('role')
-      
-      if (user.role===1){
-            createTask.style.display = "none";
-            role.textContent='user'
-            for (let task of user.tasks) {
-              renderTask(container, task);
+      const role = document.getElementById("role");
+
+      if (loggedUser.role === 1)//if the role is a user, display all its tasks 
+        { 
+        createTask.style.display = "none";
+        role.textContent = "user";
+        container.classList="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6"
+        if (loggedUser.tasks.length==0){
+            document.getElementById('header').textContent='No tasks for now :('
+        }
+        else{
+          loggedUser.tasks.sort((a,b)=>{
+            const priorityOrder={High: 1,Medium: 2,Low: 3}
+            return priorityOrder[a.priority]-priorityOrder[b.priority]
+          })
+        for (let task of loggedUser.tasks) {
+          renderTask(container, task, loggedUser.role, loggedUser);
+        }
+        }
+      } else if (loggedUser.role === 2) {//if the role is an admin, display all users with their tasks
+        createTask.style.display = "block";
+        role.textContent = "admin";
+        document.getElementById('header').textContent='Users'
+
+        const res = await fetch("/admin/users-with-tasks");
+        if (!res.ok) throw new Error("Failed to fetch users with tasks");
+        const users = await res.json();
+
+        if (users.length==1){
+          document.getElementById('header').textContent='No users for now :('
+        }
+        else{
+        for (const user of users) {
+          if (user.role == 2) continue;           
+          const userDiv = document.createElement("div");
+          userDiv.setAttribute("data-user-id", user._id);
+          userDiv.classList.add(
+            "bg-white", 
+            "bg-opacity-70",
+            "backdrop-blur-lg", 
+            "p-6", 
+            "rounded-lg",
+            "shadow-lg", 
+            "mb-6", 
+            "hover:shadow-xl", 
+            "transition-all", 
+            "flex", 
+            "flex-col", 
+            "gap-4" 
+          );  
+          
+
+          
+          const userName = document.createElement("h3");
+          userName.classList.add("text-xl", "font-semibold", "text-blue-800");
+          userName.textContent = `${user.name} (Role: ${
+            user.role === 2 ? "Admin" : "User"
+          })`;
+
+          
+          userDiv.appendChild(userName);
+
+          const taskContainer = document.createElement("div");
+          taskContainer.classList.add("flex", "gap-4", "w-full", "flex-wrap");  
+
+          
+          user.tasks
+          .sort((a, b) => {
+            const priorityOrder = { High: 1, Medium: 2, Low: 3 };
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+          })
+          .forEach((task) => {
+            renderTask(taskContainer, task, loggedUser.role, user); // Render sorted tasks
+          });
+
+          userDiv.appendChild(taskContainer)
+
+          //attach an avent listener to the task delete button 
+          const deleteButton=document.createElement('button')
+          deleteButton.textContent='Delete User'
+          deleteButton.classList.add(
+            "px-4",
+            "py-2",
+            "mt-4",
+            "bg-red-600",
+            "text-white",
+            "font-semibold",
+            "rounded-lg",
+            "hover:bg-red-700",
+            "transition-all",
+            "w-full" 
+          );
+
+          deleteButton.addEventListener('click',async ()=>{
+              console.log('clicked delete user')
+          
+              const isConfirmed = confirm(`Are you sure you want to permanently delete ${user.name}? This action cannot be undone.`);
+            if (isConfirmed){
+              try{
+              const userDelResponse=await fetch('/admin/delete-user',{
+                method: 'DELETE',
+                headers: {
+                  "Content-Type": 'application/json'
+                },
+                body: JSON.stringify(user)
+              })
+
+              if (userDelResponse.ok){
+                console.log('user deleted successfully');
+                window.location.reload()
+              }
+              else{
+                console.error('Error getting the response for deleting the user')
+              }
+            }catch{
+              console.error('Error deleting the user')
             }
-       }else if (user.role===2){
-            createTask.style.display = "block";
-            role.textContent='admin'
-       
-                const res=await fetch('/admin/users-with-tasks')
-                if(!res.ok)throw new Error('Failed to fetch users with tasks')
-                const users=await res.json()
-
-                users.forEach(user => {
-
-                  const userDiv=document.createElement('div')
-                  userDiv.classList.add('bg-white', 'p-4', 'rounded-lg', 'shadow-lg', 'mb-4');
-                  
-                  const userName=document.createElement('h3')
-                  userName.classList.add('text-xl','font-semibold','text-blue-800')
-                  userName.textContent=`${user.name} (Role: ${user.role===2? 'Admin' : 'User'})`
-
-                  userDiv.appendChild(userName)
-
-                  user.tasks.forEach(task=>{
-                    renderTask(userDiv,task)
-                  })
-
-                  container.appendChild(userDiv)
-                });
-                
           }
+          })
+        
+          userDiv.appendChild(deleteButton)
 
-    }catch(error){
-      console.error("Error when getting the user's role",error)
+         
+          container.appendChild(userDiv);
+        }
+      }
     }
-
-    
+    } catch (error) {
+      console.error("Error when getting the user's role", error);
+    }
+  
   }
 });
 
+//handle register form
 const registerForm = document.getElementById("registerForm");
 if (registerForm) {
-  registerForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const username = document.getElementById("username").value;
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    const newUser = { username, email, password };
-
-    try {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newUser),
-      });
-
-      if (response.ok) {
-        alert("Registration successfull");
-        window.location.href = "/";
-      } else {
-        alert("Registration failed. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error during registration");
-    }
-  });
+  handleRegisterForm(registerForm);
 }
 
+//handle login form
 const loginForm = document.getElementById("loginForm");
 
 if (loginForm) {
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    const loginData = { email, password };
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(loginData),
-      });
-      if (response.ok) {
-        console.log("login successfull");
-        window.location.href = "/dashboard";
-      } else {
-        console.error("Invalid credentials");
-      }
-    } catch (error) {
-      console.error("Error during login:", error);
-    }
-  });
+  handleLogIn(loginForm);
 }
 
-const logout=document.getElementById('logout')
-if (logout){
-  logout.addEventListener('click',async ()=>{
-
-    try{
-    const clearResponse=await fetch('/logout',{
-      method: 'POST',
-      credentials: 'same-origin'
-    })
-
-    if (clearResponse.ok){
-    window.location.href = "/login";
-    }
-    else{
-      console.error('Failed to log out')
-    }
-  }
-  catch(error){
-    console.error('Error during logout ',error)
-  }
-    
-  })
-
+//handle logout
+const logout = document.getElementById("logout");
+if (logout) {
+  handleLogOut(logout);
 }
 
-
-
-
-function renderTask(container, task) {
-  const div = document.createElement("div");
-  div.className = "grid grid-cols-1 md:grid-cols-3 gap-6 mt-6";
-  
-
-  div.innerHTML = `
-    <div class="bg-white p-4 rounded-lg shadow-lg col-span-1 md:col-span-3">
-      <div class="flex justify-between items-center mb-4 ">
-        <h3 class="text-xl font-semibold">${task.name}</h3>
-        <span class="text-sm text-gray-500 ml-4">${task.dueDate}</span>
-      </div>
-    <p class="text-gray-700 mb-4">${task.description}</p>
-    <div class="flex items-center mb-4">
-        <span class="px-3 py-1 text-sm font-medium text-gray-800 bg-gray-100 rounded-full">
-            ${task.status}
-        </span>
-    </div>
-    <div class="flex space-x-3">
-        ${
-          task.priority === "Low"
-            ? '<button class="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-lg">Low</button>'
-            : ""
-        }
-        ${
-          task.priority === "Medium"
-            ? '<button class="px-3 py-1 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-lg">Medium</button>'
-            : ""
-        }
-        ${
-          task.priority === "High"
-            ? '<button class="px-3 py-1 text-sm font-medium bg-red-100 text-red-800 rounded-lg">High</button>'
-            : ""
-        }
-    </div>
-</div>
-  `;
-  container.appendChild(div);
-}
-
+//handle assign task
 const taskButton = document.getElementById("createTask");
 
 if (taskButton) {
   taskButton.addEventListener("click", () => {
-    const popupContainer = document.createElement("div");
-    popupContainer.id = "popupContainer";
-    popupContainer.classList.add(
-      "fixed",
-      "top-0",
-      "left-0",
-      "w-full",
-      "h-full",
-      "flex",
-      "items-center",
-      "justify-center",
-      "bg-gray-900",
-      "bg-opacity-50",
-      "z-50"
-    );
-    document.body.appendChild(popupContainer);
-
-    fetch("./Pages/createTask.html")
-      .then((response) => response.text())
-      .then((data) => {
-        popupContainer.innerHTML = data;
-        popupContainer.classList.remove("hidden");
-
-        const taskForm = document.getElementById("taskForm");
-
-        if (taskForm) {
-          taskForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            console.log("inside task form");
-
-            const taskName = document.getElementById("task-name").value;
-            const description = document.getElementById("description").value;
-            const dueDate = document.getElementById("due-date").value;
-            const priority = document.getElementById("priority").value;
-            const assignedUser = document.getElementById("assigned-user").value;
-            console.log(dueDate);
-
-            const taskData = {
-              taskName,
-              description,
-              dueDate,
-              priority,
-              assignedUser,
-            };
-
-            const assignResponse = await fetch("/user/assign-task", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(taskData),
-            });
-
-            if (assignResponse.ok) {
-              const container = document.getElementById("popupContainer");
-              container.remove();
-            } else {
-              console.error("Something went wrong when assigning the task");
-            }
-          });
-        }
-
-        const closeButton = document.getElementById("closeForm");
-
-        if (closeButton) {
-          closeButton.addEventListener("click", () => {
-            console.log("Clicked close task button");
-
-            const container = document.getElementById("popupContainer");
-            container.remove();
-          });
-        }
-      })
-      .catch((error) => console.error("Error loading popup:", error));
+    openTaskPopup(); 
   });
 }
 
-window.addEventListener("click", (event) => {
+//handle edit task
+const taskContainer = document.getElementById("tasks");
+if (taskContainer) {
+  taskContainer.addEventListener("click", (e) => {
+    if (e.target && e.target.classList.contains("edit-task-button")) {
+      handleEditTask(e.target);
+    }
+  });
+}
+
+//closing the popup once clicked outside the window 
+window.addEventListener("click", (e) => {
   const container = document.getElementById("popupContainer");
-  if (event.target === container) {
-    container.remove();
-  }
+  if (e.target == container) container.remove();
 });

@@ -14,8 +14,9 @@ function requireAuth (req, res, next) {
         })
     }
     else {
-        res.status(401).json({message:'No token provided'})
+        return res.redirect('/login')
     }
 }
+
 
 export default requireAuth

@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
 const Schema=mongoose.Schema
 
-
 const taskSchema=new Schema({
     name:{
         type: String,
@@ -19,6 +18,9 @@ const taskSchema=new Schema({
     dueDate: {
         type: String
     },
+    assignedUser: {
+        type: String
+    },
     createdAt:{
         type: Date,
         default: Date.now
@@ -30,6 +32,4 @@ const taskSchema=new Schema({
 
 const Task=mongoose.model('Task',taskSchema) 
 
-//module.exports=Task this code only for required
-//for moduls have this way
 export default Task;
