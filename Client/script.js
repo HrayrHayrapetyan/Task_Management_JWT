@@ -27,7 +27,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         role.textContent = "user";
         container.classList="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6"
         if (loggedUser.tasks.length==0){
-            document.getElementById('header').textContent='No tasks for now :('
+          console.log('user doesnt have any tasks');
+          document.getElementById('header').textContent="You don’t have any assigned tasks yet"
         }
         else{
           loggedUser.tasks.sort((a,b)=>{

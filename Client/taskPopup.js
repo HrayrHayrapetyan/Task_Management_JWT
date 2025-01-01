@@ -1,5 +1,6 @@
 //display popup for both assigning and editing a task
 function openTaskPopup(task ) {
+    populateUserList()
     const popupContainer = document.createElement('div');
     popupContainer.id = 'popupContainer';
     popupContainer.classList.add(
@@ -91,5 +92,27 @@ function openTaskPopup(task ) {
       .catch((error) => console.error('Error loading popup:', error));
   }
   
+const populateUserList = async ()=>{
+
+  try{
+      const response=await fetch('/admin/users-with-tasks')
+
+      if (!response.ok)console.error('Failed to fetch users')
+      
+      const users=await response.json()
+      const userList=document.getElementById('user-list')
+      userList.innerHTML=''
+
+      for(let user of users){
+        if (user.role==2)continue
+        const option=document.createElement('option')
+        option.value=user.name
+        userList.appendChild(option)
+    }
+  }
+  catch{
+    console.error('Error populating the user list')
+  }
+}
 
 export default openTaskPopup

@@ -112,11 +112,6 @@ async function editTask(req, res) {
 
 async function assignTask(req, res) {
   const { taskName, description, dueDate, priority, assignedUser } = req.body;
-  console.log(taskName);
-  console.log(description);
-  console.log(dueDate);
-  console.log(priority);
-  console.log(assignedUser);
 
   try {
     const formattedDate = new Date(dueDate).toISOString().slice(0, 10);
@@ -127,6 +122,10 @@ async function assignTask(req, res) {
       return res
         .status(406)
         .json({ message: "Due date cannot be in the past" });
+    }
+    
+    if (assignedUser==''){
+      return res.status(404).json({message: 'You must choose an assignee'})
     }
 
     const checkRole = await User.findOne({ name: assignedUser }).select("role");
